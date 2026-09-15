@@ -1,41 +1,46 @@
 'use client';
-import { Species } from '@/lib/ecosystem';
-import { ShieldAlert, X } from 'lucide-react';
+import { X } from 'lucide-react';
+import type { AffectedSpecies, Species } from '@/lib/ecosystem';
 
 interface ExtinctionRippleProps {
-  targetSpecies: Species | null;
-  affectedCount: number;
+  target: Species | null;
+  affected: AffectedSpecies[];
   onClose: () => void;
 }
 
-export default function ExtinctionRipple({ targetSpecies, affectedCount, onClose }: ExtinctionRippleProps) {
-  if (!targetSpecies) return null;
+export default function ExtinctionRipple({ target, affected, onClose }: ExtinctionRippleProps) {
+  if (!target) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 bg-keystone-surface border border-red-500/40 rounded-2xl p-6 shadow-2xl max-w-md animate-bounce-short">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center space-x-2 text-red-400 font-bold">
-          <ShieldAlert className="w-5 h-5 animate-pulse" />
-          <span>Extinction Ripple Active</span>
-        </div>
-        <button onClick={onClose} className="text-gray-400 hover:text-white">
-          <X className="w-4 h-4" />
+    <aside
+      aria-live="polite"
+      className="fixed inset-x-3 bottom-3 z-50 rounded-2xl border border-[#E5484D]/40 bg-ink-800/95 p-5 shadow-2xl backdrop-blur-md sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-[400px]"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <p className="eyebrow !text-[#F3A3A5]">Loss simulation</p>
+        <button onClick={onClose} aria-label="End simulation" className="-m-1 rounded-full p-1 text-mist hover:text-paper">
+          <X className="h-4 w-4" />
         </button>
       </div>
-      <p className="text-sm text-gray-200 mb-2">
-        Simulating the removal of <strong className="text-white">{targetSpecies.common_name}</strong> ({targetSpecies.scientific_name}).
+      <h3 className="mt-2 font-display text-2xl leading-tight text-paper">Without the {target.common_name}</h3>
+      <p className="mt-2 text-sm text-mist">
+        {affected.length
+          ? `${affected.length} ${affected.length === 1 ? 'species' : 'species'} in this guide lose a shared food, habitat or partner.`
+          : 'No other species in this guide share its food or habitat. Real ecosystems are far more connected than this catalog.'}
       </p>
-      <p className="text-xs text-gray-400 mb-4">
-        Propagation algorithm detected <strong className="text-red-400">{affectedCount} connected species</strong> at direct risk due to shared habitat and dietary dependency collapse.
-      </p>
-      <div className="flex justify-end">
-        <button
-          onClick={onClose}
-          className="px-4 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-semibold rounded-lg transition-colors"
-        >
-          Reset Ecosystem Simulation
-        </button>
-      </div>
-    </div>
+      {affected.length > 0 && (
+        <ul className="mt-4 max-h-48 space-y-2.5 overflow-y-auto pr-1">
+          {affected.map(({ species, reasons }) => (
+            <li key={species.id} className="text-sm">
+              <span className="text-paper">{species.common_name}</span>
+              <span className="block text-xs text-fog">{reasons.join(' · ')}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <button onClick={onClose} className="btn-ghost mt-5 w-full py-2">
+        End simulation
+      </button>
+    </aside>
   );
 }

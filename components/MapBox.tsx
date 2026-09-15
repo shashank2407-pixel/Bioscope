@@ -1,85 +1,111 @@
 'use client';
-import React, { useState } from 'react';
-import Map, { Marker, Popup } from 'react-map-gl';
-import { Species } from '@/lib/ecosystem';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
+import Map, { Marker, NavigationControl, Popup, type MapRef } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { STATUS_META, THREAT_SCALE, type Species } from '@/lib/ecosystem';
 
-interface MapBoxProps {
-  speciesList: Species[];
+type Bounds = [[number, number], [number, number]];
+
+function boundsFor(list: Species[]): Bounds | null {
+  if (list.length === 0) return null;
+  const lats = list.map((s) => s.latitude);
+  const lngs = list.map((s) => s.longitude);
+  return [
+    [Math.min(...lngs) - 3, Math.min(...lats) - 3],
+    [Math.max(...lngs) + 3, Math.max(...lats) + 3],
+  ];
 }
 
-export default function MapBox({ speciesList }: MapBoxProps) {
-  const [selectedSpecies, setSelectedSpecies] = useState<Species | null>(null);
-  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+export default function MapBox({ speciesList }: { speciesList: Species[] }) {
+  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  const mapRef = useRef<MapRef>(null);
+  const [selected, setSelected] = useState<Species | null>(null);
+  const bounds = useMemo(() => boundsFor(speciesList), [speciesList]);
 
-  if (!mapboxToken || mapboxToken === 'your-mapbox-token') {
+  useEffect(() => {
+    if (bounds) mapRef.current?.fitBounds(bounds, { padding: 60, maxZoom: 6, duration: 800 });
+  }, [bounds]);
+
+  if (!token) {
     return (
-      <div className="w-full h-[600px] bg-keystone-surface rounded-2xl border border-gray-800 flex flex-col items-center justify-center p-8 text-center">
-        <h3 className="text-xl font-bold text-white mb-2">Mapbox Token Required</h3>
-        <p className="text-gray-400 text-sm max-w-md mb-6">
-          Please configure your <code className="text-keystone-accent">NEXT_PUBLIC_MAPBOX_TOKEN</code> in <code className="text-keystone-accent">.env.local</code> to render the live geospatial map.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-2xl">
-          {speciesList.map((s) => (
-            <div key={s.id} className="bg-keystone-bg p-4 rounded-xl border border-gray-800 text-left">
-              <span className="text-xs text-keystone-accent font-bold">{s.region}</span>
-              <h4 className="text-white font-semibold">{s.common_name}</h4>
-              <p className="text-xs text-gray-400 font-serif italic">{s.scientific_name}</p>
-            </div>
-          ))}
-        </div>
+      <div className="flex h-[420px] items-center justify-center rounded-2xl border border-dashed border-ink-500 p-8 text-center text-mist">
+        Add NEXT_PUBLIC_MAPBOX_TOKEN to .env.local to show the map.
       </div>
     );
   }
 
   return (
-    <div className="w-full h-[600px] rounded-2xl overflow-hidden border border-gray-800 shadow-2xl relative">
+    <div className="relative h-[min(70vh,640px)] min-h-[420px] overflow-hidden rounded-2xl border border-ink-600/70">
       <Map
-        initialViewState={{
-          latitude: 23.17,
-          longitude: 79.93,
-          zoom: 3.5,
-        }}
+        ref={mapRef}
+        mapboxAccessToken={token}
         mapStyle="mapbox://styles/mapbox/dark-v11"
-        mapboxAccessToken={mapboxToken}
+        initialViewState={bounds ? { bounds, fitBoundsOptions: { padding: 60, maxZoom: 6 } } : { latitude: 22, longitude: 80, zoom: 3.6 }}
+        style={{ width: '100%', height: '100%' }}
+        onClick={() => setSelected(null)}
       >
-        {speciesList.map((species) => (
-          <Marker
-            key={species.id}
-            latitude={species.latitude}
-            longitude={species.longitude}
-            anchor="bottom"
-            onClick={(e) => {
-              e.originalEvent.stopPropagation();
-              setSelectedSpecies(species);
-            }}
-          >
-            <div className="w-8 h-8 rounded-full bg-keystone-accentMuted border-2 border-keystone-accent flex items-center justify-center cursor-pointer shadow-lg hover:scale-125 transition-transform">
-              <div className="w-2.5 h-2.5 rounded-full bg-keystone-accent animate-ping" />
-            </div>
-          </Marker>
-        ))}
-
-        {selectedSpecies && (
+        <NavigationControl position="top-right" showCompass={false} />
+        {speciesList.map((s) => {
+          const color = STATUS_META[s.status].color;
+          return (
+            <Marker
+              key={s.id}
+              latitude={s.latitude}
+              longitude={s.longitude}
+              anchor="center"
+              onClick={(e) => {
+                e.originalEvent.stopPropagation();
+                setSelected(s);
+              }}
+            >
+              <button aria-label={`${s.common_name}, ${STATUS_META[s.status].label}`} className="group relative flex h-8 w-8 items-center justify-center">
+                <span className="absolute inset-0 rounded-full opacity-25 transition-opacity group-hover:opacity-60" style={{ backgroundColor: color }} />
+                <span
+                  className={`h-3.5 w-3.5 rounded-full border-2 ${s.source === 'scan' ? 'border-tag' : 'border-ink-900'}`}
+                  style={{ backgroundColor: color }}
+                />
+              </button>
+            </Marker>
+          );
+        })}
+        {selected && (
           <Popup
-            latitude={selectedSpecies.latitude}
-            longitude={selectedSpecies.longitude}
-            anchor="top"
-            onClose={() => setSelectedSpecies(null)}
-            closeButton={true}
-            className="rounded-xl overflow-hidden"
+            latitude={selected.latitude}
+            longitude={selected.longitude}
+            anchor="bottom"
+            offset={20}
+            closeButton={false}
+            maxWidth="260px"
+            onClose={() => setSelected(null)}
           >
-            <div className="bg-keystone-surface text-white p-3 max-w-xs border border-gray-800 rounded-xl">
-              <img src={selectedSpecies.image_url} alt={selectedSpecies.common_name} className="w-full h-28 object-cover rounded-lg mb-2" />
-              <h4 className="font-bold text-sm">{selectedSpecies.common_name}</h4>
-              <p className="text-xs text-gray-400 italic font-serif mb-2">{selectedSpecies.scientific_name}</p>
-              <span className="px-2 py-0.5 bg-keystone-accentMuted text-keystone-accent text-[10px] font-bold rounded">
-                {selectedSpecies.status}
-              </span>
+            <div className="w-60 overflow-hidden rounded-xl bg-paper text-ink-900 shadow-2xl">
+              <img src={selected.image_url} alt={selected.common_name} className="h-32 w-full object-cover" />
+              <div className="p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <h4 className="font-display text-lg leading-tight">{selected.common_name}</h4>
+                  <span className="mt-1 flex items-center gap-1 font-mono text-[11px] font-bold">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: STATUS_META[selected.status].color }} />
+                    {selected.status}
+                  </span>
+                </div>
+                <p className="font-display text-sm italic text-ink-600">{selected.scientific_name}</p>
+                <Link href={`/species/${selected.id}`} className="mt-2 inline-block font-mono text-[11px] uppercase tracking-wider underline underline-offset-2">
+                  Open field guide page →
+                </Link>
+              </div>
             </div>
           </Popup>
         )}
       </Map>
+      <div className="pointer-events-none absolute bottom-3 left-3 flex flex-wrap gap-3 rounded-lg bg-ink-900/85 px-3 py-2 font-mono text-[11px] text-mist backdrop-blur">
+        {THREAT_SCALE.map((code) => (
+          <span key={code} className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: STATUS_META[code].color }} />
+            {code}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

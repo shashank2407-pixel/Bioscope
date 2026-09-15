@@ -1,150 +1,369 @@
 'use client';
-import { useState } from 'react';
-import { Camera, Upload, X, CheckCircle2, MapPin } from 'lucide-react';
-import { Species } from '@/lib/ecosystem';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowUpRight, Camera, Check, LoaderCircle, RotateCcw, TriangleAlert, Upload, X } from 'lucide-react';
+import type { Species } from '@/lib/ecosystem';
+import { prepareImage } from '@/lib/image';
+import { saveScan } from '@/lib/useCatalog';
+import SpecimenPhoto from './SpecimenPhoto';
+import StatusTag from './StatusTag';
 
 interface FieldScannerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSpeciesIdentified: (species: Species) => void;
+  /** A file dropped elsewhere on the page; identification starts as soon as the modal opens. */
+  initialFile?: File | null;
 }
 
-export default function FieldScannerModal({ isOpen, onClose, onSpeciesIdentified }: FieldScannerModalProps) {
-  const [scanning, setScanning] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [identifiedSpecies, setIdentifiedSpecies] = useState<Species | null>(null);
+type Phase =
+  | { name: 'idle' }
+  | { name: 'scanning'; preview: string }
+  | { name: 'result'; preview: string; species: Species; cues: string }
+  | { name: 'rejected'; preview: string; reason: string }
+  | { name: 'error'; preview?: string; message: string };
 
-  if (!isOpen) return null;
+const STEPS = ['Reading the silhouette', 'Comparing markings', 'Checking the Red List', 'Mapping its range'];
+const PROVIDER_LABEL: Record<string, string> = { gemini: 'Gemini', openai: 'OpenAI' };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+const TITLES: Record<Phase['name'], string> = {
+  idle: 'Identify a species from a photo',
+  scanning: 'Identifying…',
+  result: 'Species identified',
+  rejected: 'No animal or plant found',
+  error: 'Couldn’t identify this photo',
+};
 
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-    setScanning(true);
-    setIdentifiedSpecies(null);
+export default function FieldScannerModal({ isOpen, onClose, initialFile }: FieldScannerModalProps) {
+  const router = useRouter();
+  const [phase, setPhase] = useState<Phase>({ name: 'idle' });
+  const [step, setStep] = useState(0);
+  const [developed, setDeveloped] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const requestId = useRef(0);
+  const lastFile = useRef<File | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const cameraInput = useRef<HTMLInputElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
 
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = async () => {
-      const base64String = reader.result as string;
+  const identify = useCallback(async (file: File) => {
+    const id = ++requestId.current;
+    lastFile.current = file;
+    setDeveloped(false);
 
-      try {
-        const res = await fetch('/api/identify-species', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageBase64: base64String }),
-        });
+    let prepared;
+    try {
+      prepared = await prepareImage(file);
+    } catch (err) {
+      setPhase({ name: 'error', message: err instanceof Error ? err.message : 'That image couldn’t be read.' });
+      return;
+    }
+    if (id !== requestId.current) return;
+    setStep(0);
+    setPhase({ name: 'scanning', preview: prepared.dataUrl });
 
-        const data = await res.json();
-        
-        const newSpecies: Species = {
-          id: Math.random().toString(36).substring(2, 9),
-          scientific_name: data.scientific_name || 'Panthera tigris',
-          common_name: data.common_name || 'Bengal Tiger',
-          description: data.description || 'An apex predator vital for maintaining balanced ecosystems.',
-          image_url: url,
-          habitat: data.habitat || 'Forest',
-          region: data.region || 'India',
-          status: data.status || 'EN',
-          latitude: data.latitude || 23.17,
-          longitude: data.longitude || 79.93,
-          ecological_role: data.ecological_role || 'Keystone predator maintaining trophic balance.',
-          dependencies: data.dependencies || ['Chital Deer', 'Sal Tree']
-        };
+    try {
+      const res = await fetch('/api/identify-species', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: prepared.dataUrl }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (id !== requestId.current) return;
+      if (!res.ok) throw new Error(body.error || `Identification failed (HTTP ${res.status}).`);
 
-        setIdentifiedSpecies(newSpecies);
-      } catch (err) {
-        // Fallback species if fetch fails
-        setIdentifiedSpecies({
-          id: Math.random().toString(36).substring(2, 9),
-          scientific_name: 'Panthera tigris',
-          common_name: 'Bengal Tiger',
-          description: 'An apex predator vital for maintaining balanced ecosystems.',
-          image_url: url,
-          habitat: 'Forest',
-          region: 'India',
-          status: 'EN',
-          latitude: 23.17,
-          longitude: 79.93,
-          ecological_role: 'Keystone predator.',
-          dependencies: ['Chital Deer']
-        });
-      } finally {
-        setScanning(false);
+      if (!body.identified) {
+        setPhase({ name: 'rejected', preview: prepared.dataUrl, reason: body.reason });
+        return;
       }
+
+      const { visual_cues, ...fields } = body.species;
+      const species: Species = {
+        ...fields,
+        id: `scan-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+        image_url: prepared.thumbUrl,
+        source: 'scan',
+        identified_by: body.provider,
+        scanned_at: new Date().toISOString(),
+      };
+      saveScan(species);
+      setPhase({ name: 'result', preview: prepared.dataUrl, species, cues: visual_cues ?? '' });
+    } catch (err) {
+      if (id !== requestId.current) return;
+      const message =
+        err instanceof TypeError
+          ? 'Couldn’t reach the server. Check your connection and try again.'
+          : err instanceof Error
+            ? err.message
+            : 'Identification failed.';
+      setPhase({ name: 'error', preview: prepared.dataUrl, message });
+    }
+  }, []);
+
+  // Start immediately when opened with a dropped file; reset when closed.
+  useEffect(() => {
+    if (isOpen && initialFile) identify(initialFile);
+    if (!isOpen) {
+      requestId.current++;
+      setPhase({ name: 'idle' });
+    }
+  }, [isOpen, initialFile, identify]);
+
+  useEffect(() => {
+    if (phase.name !== 'scanning') return;
+    const timer = setInterval(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), 1700);
+    return () => clearInterval(timer);
+  }, [phase.name]);
+
+  useEffect(() => {
+    if (phase.name !== 'result') return;
+    const t = setTimeout(() => setDeveloped(true), 150);
+    return () => clearTimeout(t);
+  }, [phase.name]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    closeButton.current?.focus();
+    return () => {
+      document.body.style.overflow = overflow;
+      window.removeEventListener('keydown', onKey);
     };
+  }, [isOpen, onClose]);
+
+  const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (file) identify(file);
   };
 
+  const reset = () => {
+    requestId.current++;
+    setPhase({ name: 'idle' });
+  };
+
+  const preview = 'preview' in phase ? phase.preview : undefined;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="bg-keystone-surface border border-gray-800 rounded-2xl w-full max-w-lg p-6 relative shadow-2xl">
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors">
-          <X className="w-5 h-5" />
-        </button>
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-ink-950/80 backdrop-blur-sm sm:items-center sm:p-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onMouseDown={(e) => e.target === e.currentTarget && onClose()}
+        >
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="scanner-title"
+            initial={{ y: 32, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 32, opacity: 0 }}
+            transition={{ type: 'spring', damping: 30, stiffness: 320 }}
+            className="relative max-h-[94vh] w-full max-w-4xl overflow-y-auto rounded-t-3xl border border-ink-600 bg-ink-900 shadow-2xl sm:rounded-3xl"
+          >
+            <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-ink-700 bg-ink-900/95 px-6 pb-4 pt-5 backdrop-blur">
+              <div>
+                <p className="eyebrow">Field scanner</p>
+                <h2 id="scanner-title" className="mt-1 font-display text-2xl text-paper">
+                  {TITLES[phase.name]}
+                </h2>
+              </div>
+              <button ref={closeButton} onClick={onClose} aria-label="Close scanner" className="rounded-full p-2 text-mist hover:bg-ink-800 hover:text-paper">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
-        <div className="flex items-center space-x-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-keystone-accentMuted border border-keystone-accent flex items-center justify-center text-keystone-accent">
-            <Camera className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-white">Global Field Scanner AI</h3>
-            <p className="text-xs text-gray-400">Upload any wildlife photo for instant identification & mapping.</p>
-          </div>
-        </div>
+            <input ref={fileInput} type="file" accept="image/*" className="hidden" onChange={onPick} />
+            <input ref={cameraInput} type="file" accept="image/*" capture="environment" className="hidden" onChange={onPick} />
 
-        {!previewUrl ? (
-          <label className="border-2 border-dashed border-gray-800 hover:border-keystone-accent rounded-2xl h-60 flex flex-col items-center justify-center cursor-pointer transition-all bg-keystone-bg group">
-            <Upload className="w-10 h-10 text-gray-500 group-hover:text-keystone-accent mb-3 transition-colors" />
-            <span className="text-sm font-medium text-gray-300">Click to upload species photo</span>
-            <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-          </label>
-        ) : (
-          <div className="relative rounded-xl overflow-hidden h-48 bg-black border border-gray-800 mb-4">
-            <img src={previewUrl} alt="Field capture" className="w-full h-full object-cover" />
-            {scanning && (
-              <div className="absolute inset-0 bg-keystone-accent/10 backdrop-blur-[2px] flex flex-col items-center justify-center">
-                <div className="w-10 h-10 border-4 border-keystone-accent border-t-transparent rounded-full animate-spin mb-2" />
-                <p className="text-xs font-mono text-keystone-accent uppercase tracking-widest animate-pulse">
-                  Analyzing Global Taxonomy...
-                </p>
+            {phase.name === 'idle' || (phase.name === 'error' && !preview) ? (
+              <div className="p-6">
+                {phase.name === 'error' && (
+                  <p className="mb-4 flex items-start gap-2 rounded-xl bg-[#E5484D]/10 px-4 py-3 text-sm text-[#F3A3A5]">
+                    <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                    {phase.message}
+                  </p>
+                )}
+                <div
+                  onClick={() => fileInput.current?.click()}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragging(true);
+                  }}
+                  onDragLeave={() => setDragging(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragging(false);
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) identify(file);
+                  }}
+                  className={`flex min-h-[18rem] cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed px-6 text-center transition-colors ${
+                    dragging ? 'border-tag bg-ink-800' : 'border-ink-500 hover:border-mist hover:bg-ink-800/50'
+                  }`}
+                >
+                  <Upload className="h-8 w-8 text-mist" strokeWidth={1.5} aria-hidden />
+                  <p className="font-display text-2xl text-paper">Drop a photo here</p>
+                  <p className="max-w-sm text-sm text-fog">
+                    JPEG, PNG or WebP. A clear, close shot of one animal or plant gives the most reliable match.
+                  </p>
+                  <div className="mt-3 flex flex-wrap justify-center gap-3">
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        fileInput.current?.click();
+                      }}
+                    >
+                      <Upload className="h-4 w-4" aria-hidden />
+                      Choose a photo
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-ghost sm:hidden"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        cameraInput.current?.click();
+                      }}
+                    >
+                      <Camera className="h-4 w-4" aria-hidden />
+                      Take a photo
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="grid gap-6 p-6 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] md:gap-8">
+                <div className="relative self-start bg-paper p-2.5">
+                  <SpecimenPhoto src={preview} alt="Your photo" develop={developed ? 'always' : 'never'} className="aspect-[4/5] w-full" priority />
+                  {phase.name === 'scanning' && (
+                    <div aria-hidden className="pointer-events-none absolute inset-2.5 overflow-hidden">
+                      <div className="scan-sweep" />
+                    </div>
+                  )}
+                </div>
+
+                <div aria-live="polite">
+                  {phase.name === 'scanning' && (
+                    <>
+                      <ol className="space-y-4 pt-2">
+                        {STEPS.map((label, i) => (
+                          <li key={label} className={`flex items-center gap-3 font-mono text-sm ${i < step ? 'text-mist' : i === step ? 'text-paper' : 'text-fog/60'}`}>
+                            {i < step ? (
+                              <Check className="h-4 w-4 text-tag" aria-hidden />
+                            ) : i === step ? (
+                              <LoaderCircle className="h-4 w-4 animate-spin text-tag" aria-hidden />
+                            ) : (
+                              <span className="mx-1.5 h-1 w-1 rounded-full bg-current" aria-hidden />
+                            )}
+                            {label}
+                          </li>
+                        ))}
+                      </ol>
+                      <p className="mt-8 text-sm text-fog">This usually takes 5–10 seconds.</p>
+                    </>
+                  )}
+
+                  {phase.name === 'result' && (
+                    <>
+                      <p className="eyebrow">
+                        {Math.round((phase.species.confidence ?? 0) * 100)}% match · via {PROVIDER_LABEL[phase.species.identified_by ?? ''] ?? 'AI'}
+                      </p>
+                      <h3 className="mt-2 font-display text-4xl font-light leading-[1.02] text-paper sm:text-5xl">{phase.species.common_name}</h3>
+                      <p className="mt-1 font-display text-xl italic text-mist">{phase.species.scientific_name}</p>
+                      <div className="mt-4 flex flex-wrap items-center gap-3">
+                        <StatusTag code={phase.species.status} withLabel />
+                        <span className="font-mono text-[11px] uppercase tracking-wider text-fog">
+                          {phase.species.habitat} · {phase.species.region}
+                        </span>
+                      </div>
+                      {(phase.species.confidence ?? 0) < 0.5 && (
+                        <p className="mt-4 flex items-start gap-2 rounded-lg bg-[#E9C46A]/10 px-3 py-2 text-sm text-[#F1D58F]">
+                          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                          Low confidence. A closer, sharper photo will give a more reliable match.
+                        </p>
+                      )}
+                      <p className="mt-4 text-[15px] leading-relaxed text-mist">{phase.species.description}</p>
+                      {phase.cues && (
+                        <p className="mt-3 text-sm text-fog">
+                          <span className="text-mist">Identified from: </span>
+                          {phase.cues}
+                        </p>
+                      )}
+                      {!!phase.species.dependencies?.length && (
+                        <div className="mt-5">
+                          <p className="eyebrow mb-2">Depends on</p>
+                          <ul className="flex flex-wrap gap-1.5">
+                            {phase.species.dependencies.map((d) => (
+                              <li key={d} className="rounded-full border border-ink-500 px-2.5 py-0.5 text-sm text-mist">
+                                {d}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      <div className="mt-7 flex flex-wrap gap-3">
+                        <button
+                          className="btn-primary"
+                          onClick={() => {
+                            const id = phase.species.id;
+                            onClose();
+                            router.push(`/species/${id}`);
+                          }}
+                        >
+                          Open field guide page
+                          <ArrowUpRight className="h-4 w-4" aria-hidden />
+                        </button>
+                        <button className="btn-ghost" onClick={reset}>
+                          <RotateCcw className="h-4 w-4" aria-hidden />
+                          Scan another
+                        </button>
+                      </div>
+                      <p className="mt-4 text-xs text-fog">Saved to your scans in this browser.</p>
+                    </>
+                  )}
+
+                  {phase.name === 'rejected' && (
+                    <>
+                      <p className="text-[15px] leading-relaxed text-mist">{phase.reason}</p>
+                      <button className="btn-primary mt-6" onClick={() => fileInput.current?.click()}>
+                        <Upload className="h-4 w-4" aria-hidden />
+                        Try another photo
+                      </button>
+                    </>
+                  )}
+
+                  {phase.name === 'error' && (
+                    <>
+                      <p className="flex items-start gap-2 rounded-xl bg-[#E5484D]/10 px-4 py-3 text-sm text-[#F3A3A5]">
+                        <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                        {phase.message}
+                      </p>
+                      <div className="mt-6 flex flex-wrap gap-3">
+                        {lastFile.current && (
+                          <button className="btn-primary" onClick={() => lastFile.current && identify(lastFile.current)}>
+                            <RotateCcw className="h-4 w-4" aria-hidden />
+                            Try again
+                          </button>
+                        )}
+                        <button className="btn-ghost" onClick={() => fileInput.current?.click()}>
+                          Choose another photo
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             )}
-          </div>
-        )}
-
-        {identifiedSpecies && !scanning && (
-          <div className="bg-keystone-bg border border-keystone-accent/30 rounded-xl p-4 mb-4">
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center space-x-2">
-                <CheckCircle2 className="w-4 h-4 text-keystone-accent" />
-                <h4 className="font-bold text-white text-base">{identifiedSpecies.common_name}</h4>
-              </div>
-              <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs font-bold rounded">
-                {identifiedSpecies.status}
-              </span>
-            </div>
-            <p className="text-xs text-gray-400 italic font-serif mb-2">{identifiedSpecies.scientific_name}</p>
-            <p className="text-xs text-gray-300 mb-3">{identifiedSpecies.description}</p>
-            
-            <div className="flex items-center space-x-2 text-xs text-keystone-accent mb-4 bg-keystone-surface p-2 rounded-lg border border-gray-800">
-              <MapPin className="w-3.5 h-3.5" />
-              <span>Primary Region: <strong className="text-white">{identifiedSpecies.region}</strong> ({identifiedSpecies.habitat})</span>
-            </div>
-
-            <button
-              onClick={() => {
-                onSpeciesIdentified(identifiedSpecies);
-                onClose();
-              }}
-              className="w-full py-2.5 bg-keystone-accent text-keystone-bg text-xs font-semibold rounded-lg hover:opacity-90 transition-opacity"
-            >
-              View on Global Map & Ecosystem
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

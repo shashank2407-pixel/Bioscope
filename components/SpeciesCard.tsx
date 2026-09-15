@@ -1,80 +1,72 @@
 'use client';
-import { motion } from 'framer-motion';
-import { Species } from '@/lib/ecosystem';
 import Link from 'next/link';
+import type { Species } from '@/lib/ecosystem';
+import SpecimenPhoto from './SpecimenPhoto';
+import StatusTag from './StatusTag';
+
+export type RippleState = 'removed' | 'at-risk' | 'unaffected';
 
 interface SpeciesCardProps {
   species: Species;
-  index: number;
-  isAffected?: boolean;
-  onSimulateRipple?: (species: Species) => void;
+  ripple?: RippleState;
+  riskReason?: string;
+  onSimulateLoss?: (species: Species) => void;
 }
 
-export default function SpeciesCard({ species, index, isAffected, onSimulateRipple }: SpeciesCardProps) {
-  const statusColors = {
-    LC: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-    VU: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-    EN: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-    CR: 'bg-red-500/20 text-red-400 border-red-500/30 animate-pulse',
-  };
+export default function SpeciesCard({ species, ripple, riskReason, onSimulateLoss }: SpeciesCardProps) {
+  const threatened = species.status === 'VU' || species.status === 'EN' || species.status === 'CR';
+  const frame =
+    ripple === 'at-risk'
+      ? 'border-[#E5484D]/70 ring-1 ring-[#E5484D]/40'
+      : ripple === 'removed'
+        ? 'border-ink-600 opacity-60 grayscale'
+        : ripple === 'unaffected'
+          ? 'border-ink-600/60 opacity-35'
+          : 'border-ink-600/70 hover:border-ink-500';
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0, filter: isAffected ? 'grayscale(100%) opacity(40%)' : 'grayscale(0%) opacity(100%)' }}
-      transition={{ delay: index * 0.05 }}
-      className="bg-keystone-surface rounded-xl overflow-hidden border border-gray-800 hover:border-keystone-accent transition-all group flex flex-col justify-between"
-    >
-      <div>
-        <div className="relative h-48 overflow-hidden bg-gray-900">
-          <img
-            src={species.image_url}
-            alt={species.common_name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?auto=format&fit=crop&q=80&w=800';
-            }}
-          />
-          <div className="absolute top-3 right-3 flex space-x-2">
-            <span className={`px-2.5 py-1 text-xs rounded-full font-bold border backdrop-blur-md ${statusColors[species.status] || 'bg-gray-800 text-gray-300'}`}>
-              {species.status}
-            </span>
+    <article className={`group relative flex flex-col overflow-hidden rounded-2xl border bg-ink-800/70 transition-all duration-500 ${frame}`}>
+      <Link href={`/species/${species.id}`} className="block focus-visible:[outline-offset:-3px]">
+        <div className="relative">
+          <SpecimenPhoto src={species.image_url} alt={species.common_name} className="aspect-[4/3] w-full" />
+          <div className="absolute left-3 top-3 flex gap-2">
+            <StatusTag code={species.status} />
+            {species.source === 'scan' && (
+              <span className="rounded-[3px] bg-tag px-1.5 font-mono text-[11px] font-bold uppercase leading-5 text-ink-900">Your scan</span>
+            )}
           </div>
-        </div>
-
-        <div className="p-5">
-          <h3 className="text-xl font-bold text-white group-hover:text-keystone-accent transition-colors">{species.common_name}</h3>
-          <p className="text-gray-400 italic text-sm font-serif mb-3">{species.scientific_name}</p>
-          <p className="text-gray-300 text-sm line-clamp-2 mb-4">{species.description}</p>
-          
-          <div className="flex flex-wrap gap-2 mb-4">
-            <span className="px-2.5 py-1 bg-keystone-bg text-xs rounded-md text-gray-300 border border-gray-800">
-              {species.habitat}
+          {ripple === 'at-risk' && (
+            <span className="absolute bottom-3 left-3 rounded-[3px] bg-[#E5484D] px-2 font-mono text-[11px] font-bold uppercase leading-5 text-white">
+              At risk
             </span>
-            <span className="px-2.5 py-1 bg-keystone-bg text-xs rounded-md text-gray-300 border border-gray-800">
-              {species.region}
+          )}
+          {ripple === 'removed' && (
+            <span className="absolute bottom-3 left-3 rounded-[3px] bg-ink-900 px-2 font-mono text-[11px] font-bold uppercase leading-5 text-paper">
+              Removed
             </span>
-          </div>
+          )}
         </div>
-      </div>
-
-      <div className="px-5 pb-5 pt-0 flex items-center justify-between gap-2 border-t border-gray-800/60 pt-4">
-        <Link
-          href={`/species/${species.id}`}
-          className="text-xs font-semibold text-keystone-accent hover:underline flex items-center space-x-1"
-        >
-          <span>Explore Field Guide →</span>
-        </Link>
-        {onSimulateRipple && (species.status === 'EN' || species.status === 'CR') && (
+        <div className="px-5 pt-4">
+          <h3 className="font-display text-[1.6rem] leading-tight text-paper">{species.common_name}</h3>
+          <p className="font-display text-base italic text-mist">{species.scientific_name}</p>
+          <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-mist/90">
+            {ripple === 'at-risk' && riskReason ? riskReason : species.description}
+          </p>
+        </div>
+      </Link>
+      <div className="mt-auto flex items-center justify-between gap-3 px-5 pb-4 pt-4">
+        <span className="truncate font-mono text-[11px] uppercase tracking-wider text-fog">
+          {species.habitat} · {species.region}
+        </span>
+        {onSimulateLoss && threatened && !ripple && (
           <button
-            onClick={() => onSimulateRipple(species)}
-            className="px-3 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs rounded-lg font-medium transition-colors"
+            onClick={() => onSimulateLoss(species)}
+            className="shrink-0 rounded-full border border-ink-500 px-3 py-1 text-xs text-mist transition-colors hover:border-[#E5484D] hover:text-[#F3A3A5]"
           >
-            Simulate Loss
+            Simulate loss
           </button>
         )}
       </div>
-    </motion.div>
+    </article>
   );
 }

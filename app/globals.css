@@ -2,29 +2,126 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #0A0F0D;
-  --foreground: #EDEDED;
+@layer base {
+  html {
+    color-scheme: dark;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-ink-900 font-sans text-paper antialiased;
+  }
+  ::selection {
+    background: #f2c14e;
+    color: #0a1f30;
+  }
+  :focus-visible {
+    outline: 2px solid #f2c14e;
+    outline-offset: 3px;
+  }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-inter), sans-serif;
-  overflow-x: hidden;
+@layer components {
+  .eyebrow {
+    @apply font-mono text-[11px] uppercase tracking-[0.2em] text-fog;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-tag px-5 py-2.5 text-sm font-semibold text-ink-900 transition-colors hover:bg-[#F7D27A] active:translate-y-px disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-ink-500 px-5 py-2.5 text-sm font-medium text-paper transition-colors hover:border-mist hover:bg-ink-800;
+  }
+  .chip {
+    @apply rounded-full border px-3 py-1 text-sm transition-colors;
+  }
 }
 
-/* Custom Scrollbar */
+/* ---------- Specimen photo: a cyanotype print that develops into colour ---------- */
+.specimen {
+  position: relative;
+  overflow: hidden;
+  background-color: #0b2a4a;
+}
+.specimen > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.specimen > .specimen-cyano {
+  filter: url(#cyanotype);
+  transition: opacity 1.2s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.specimen.is-developed > .specimen-cyano,
+.group:hover .specimen[data-develop='hover'] > .specimen-cyano,
+.group:focus-within .specimen[data-develop='hover'] > .specimen-cyano {
+  opacity: 0;
+}
+.group:hover .specimen[data-develop='hover'] > img {
+  transform: scale(1.035);
+}
+@media (hover: none) {
+  .specimen[data-develop='hover'] > .specimen-cyano {
+    opacity: 0;
+  }
+}
+
+/* ---------- Scanner sweep ---------- */
+.scan-sweep {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -35%;
+  height: 35%;
+  background: linear-gradient(to bottom, rgba(242, 193, 78, 0) 0%, rgba(242, 193, 78, 0.28) 90%, rgba(242, 193, 78, 0.95) 100%);
+  animation: sweep 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@keyframes sweep {
+  to {
+    top: 100%;
+  }
+}
+
+/* ---------- Mapbox popup reset ---------- */
+.mapboxgl-popup-content {
+  background: transparent !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+.mapboxgl-popup-tip {
+  display: none;
+}
+.mapboxgl-ctrl-group {
+  background: #0f2a40 !important;
+}
+.mapboxgl-ctrl-group button + button {
+  border-top-color: #1e4766 !important;
+}
+.mapboxgl-ctrl-group .mapboxgl-ctrl-icon {
+  filter: invert(1) brightness(0.85);
+}
+
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: #0A0F0D;
+  background: #061521;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1C2822;
-  border-radius: 4px;
+  background: #1e4766;
+  border-radius: 999px;
+  border: 2px solid #061521;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: #00E676;
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

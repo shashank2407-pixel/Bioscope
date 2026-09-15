@@ -1,183 +1,147 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { Species } from '@/lib/ecosystem';
-import { supabase } from '@/lib/supabase';
-import mockData from '@/public/mockData.json';
+import { useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
+import { findAffected, type Species } from '@/lib/ecosystem';
+import { applyFilters, countByStatus, EMPTY_FILTERS, isFiltered, uniqueSorted, type CatalogFilterState } from '@/lib/filters';
+import { askCatalog } from '@/lib/semantic-search';
+import { useCatalog } from '@/lib/useCatalog';
 import Navbar from '@/components/Navbar';
-import SidebarFilters from '@/components/SidebarFilters';
+import Hero from '@/components/Hero';
 import SearchBar from '@/components/SearchBar';
+import CatalogFilters from '@/components/SidebarFilters';
+import ViewToggle, { type CatalogView } from '@/components/ViewToggle';
 import SpeciesGrid from '@/components/SpeciesGrid';
-import MapBox from '@/components/MapBox';
+import EmptyState from '@/components/EmptyState';
 import NetworkView from '@/components/NetworkView';
 import ExtinctionRipple from '@/components/ExtinctionRipple';
 import FieldScannerModal from '@/components/FieldScannerModal';
 
+const MapBox = dynamic(() => import('@/components/MapBox'), {
+  ssr: false,
+  loading: () => <div className="h-[min(70vh,640px)] min-h-[420px] animate-pulse rounded-2xl bg-ink-800" />,
+});
+
 export default function Home() {
-  const [speciesList, setSpeciesList] = useState<Species[]>([]);
-  const [filteredSpecies, setFilteredSpecies] = useState<Species[]>([]);
-  const [currentView, setCurrentView] = useState<'grid' | 'map' | 'network'>('grid');
-  
-  const [selectedHabitat, setSelectedHabitat] = useState('');
-  const [selectedRegion, setSelectedRegion] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchingAI, setIsSearchingAI] = useState(false);
+  const { catalog, all } = useCatalog();
+  const [view, setView] = useState<CatalogView>('grid');
+  const [filters, setFilters] = useState<CatalogFilterState>(EMPTY_FILTERS);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [asking, setAsking] = useState(false);
+  const [rippleTarget, setRippleTarget] = useState<Species | null>(null);
+  const [scanner, setScanner] = useState<{ open: boolean; file: File | null }>({ open: false, file: null });
 
-  const [activeRippleSpecies, setActiveRippleSpecies] = useState<Species | null>(null);
-  const [affectedIds, setAffectedIds] = useState<string[]>([]);
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const update = (patch: Partial<CatalogFilterState>) => setFilters((f) => ({ ...f, ...patch }));
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const { data, error } = await supabase.from('species').select('*');
-        if (error || !data || data.length === 0) {
-          setSpeciesList(mockData as Species[]);
-          setFilteredSpecies(mockData as Species[]);
-        } else {
-          setSpeciesList(data as Species[]);
-          setFilteredSpecies(data as Species[]);
-        }
-      } catch (err) {
-        setSpeciesList(mockData as Species[]);
-        setFilteredSpecies(mockData as Species[]);
-      }
-    }
-    loadData();
-  }, []);
+  const filtered = useMemo(() => applyFilters(all, filters), [all, filters]);
+  const statusCounts = useMemo(() => countByStatus(applyFilters(all, { ...filters, status: '' })), [all, filters]);
+  const habitats = useMemo(() => uniqueSorted(all.map((s) => s.habitat)), [all]);
+  const regions = useMemo(() => uniqueSorted(all.map((s) => s.region)), [all]);
 
-  // Client-side filtering logic
-  useEffect(() => {
-    let result = speciesList;
+  const affected = useMemo(() => (rippleTarget ? findAffected(rippleTarget, all) : []), [rippleTarget, all]);
+  const ripple = rippleTarget
+    ? { targetId: rippleTarget.id, affected: new Map(affected.map((a) => [a.species.id, a.reasons.join(' · ')])) }
+    : null;
 
-    if (selectedHabitat) {
-      result = result.filter(s => s.habitat.toLowerCase() === selectedHabitat.toLowerCase());
-    }
-    if (selectedRegion) {
-      result = result.filter(s => s.region.toLowerCase() === selectedRegion.toLowerCase());
-    }
-    if (selectedStatus) {
-      result = result.filter(s => s.status.toUpperCase() === selectedStatus.toUpperCase());
-    }
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(s => s.common_name.toLowerCase().includes(q) || s.scientific_name.toLowerCase().includes(q));
-    }
+  const featured = catalog.find((s) => s.id === 'snow-leopard') ?? catalog[0];
+  const threatenedCount = catalog.filter((s) => ['VU', 'EN', 'CR'].includes(s.status)).length;
 
-    setFilteredSpecies(result);
-  }, [selectedHabitat, selectedRegion, selectedStatus, searchQuery, speciesList]);
-
-  const handleSemanticSearch = async (query: string) => {
-    if (!query || query.length < 3) return;
-    setIsSearchingAI(true);
+  const ask = async (query: string) => {
+    setAsking(true);
     try {
-      const res = await fetch('/api/semantic-search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query }),
-      });
-      const filters = await res.json();
-      if (filters.habitat) setSelectedHabitat(filters.habitat);
-      if (filters.status) setSelectedStatus(filters.status);
-      if (filters.region) setSelectedRegion(filters.region);
-    } catch (err) {
-      console.error(err);
+      const result = await askCatalog(query, all);
+      update({ aiIds: result.ids });
+      setAiSummary(result.summary);
+    } catch {
+      setAiSummary('The guide is unavailable, showing name matches instead');
     } finally {
-      setIsSearchingAI(false);
+      setAsking(false);
     }
   };
 
-  const handleSimulateRipple = (species: Species) => {
-    setActiveRippleSpecies(species);
-    const affected = speciesList
-      .filter(s => s.id !== species.id && (s.habitat === species.habitat || species.dependencies?.includes(s.common_name)))
-      .map(s => s.id);
-    setAffectedIds(affected);
+  const resetAll = () => {
+    setFilters(EMPTY_FILTERS);
+    setAiSummary(null);
+    setRippleTarget(null);
   };
 
-  const handleResetFilters = () => {
-    setSelectedHabitat('');
-    setSelectedRegion('');
-    setSelectedStatus('');
-    setSearchQuery('');
-    setActiveRippleSpecies(null);
-    setAffectedIds([]);
-  };
-
-  const habitats = Array.from(new Set(speciesList.map(s => s.habitat)));
-  const regions = Array.from(new Set(speciesList.map(s => s.region)));
+  const openScanner = (file?: File) => setScanner({ open: true, file: file ?? null });
 
   return (
-    <main className="min-h-screen bg-keystone-bg">
-      <Navbar
-        currentView={currentView}
-        setCurrentView={setCurrentView}
-        userLocation="Bengaluru, India (42 endangered species within 50 miles)"
-        onOpenScanner={() => setIsScannerOpen(true)}
-      />
+    <>
+      <Navbar onOpenScanner={() => openScanner()} />
+      <main>
+        <Hero featured={featured} speciesCount={catalog.length} threatenedCount={threatenedCount} onScan={openScanner} />
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <SearchBar
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          onSemanticSearch={handleSemanticSearch}
-          isSearchingAI={isSearchingAI}
-        />
+        <section id="catalog" className="mx-auto max-w-7xl scroll-mt-16 px-5 py-14 sm:px-8 lg:py-20">
+          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="eyebrow">The catalog</p>
+              <h2 className="mt-3 font-display text-4xl font-light tracking-[-0.01em] text-paper sm:text-5xl">
+                Species, and the web they hold up
+              </h2>
+            </div>
+            <ViewToggle value={view} onChange={setView} />
+          </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          <div className="lg:col-span-1">
-            <SidebarFilters
-              selectedHabitat={selectedHabitat}
-              setSelectedHabitat={setSelectedHabitat}
-              selectedRegion={selectedRegion}
-              setSelectedRegion={setSelectedRegion}
-              selectedStatus={selectedStatus}
-              setSelectedStatus={setSelectedStatus}
+          <div className="mt-8 space-y-4">
+            <SearchBar
+              query={filters.query}
+              onQueryChange={(query) => {
+                update({ query, aiIds: null });
+                setAiSummary(null);
+              }}
+              onAsk={ask}
+              asking={asking}
+              aiSummary={aiSummary}
+              resultCount={filtered.length}
+              onClearAi={() => {
+                update({ aiIds: null, query: '' });
+                setAiSummary(null);
+              }}
+            />
+            <CatalogFilters
+              counts={statusCounts}
+              status={filters.status}
+              onStatus={(status) => update({ status })}
               habitats={habitats}
+              habitat={filters.habitat}
+              onHabitat={(habitat) => update({ habitat })}
               regions={regions}
-              onReset={handleResetFilters}
+              region={filters.region}
+              onRegion={(region) => update({ region })}
+              canReset={isFiltered(filters)}
+              onReset={resetAll}
             />
           </div>
 
-          <div className="lg:col-span-3">
-            {currentView === 'grid' && (
-              <SpeciesGrid
-                speciesList={filteredSpecies}
-                affectedSpeciesIds={affectedIds}
-                onSimulateRipple={handleSimulateRipple}
-                onClearFilters={handleResetFilters}
-              />
-            )}
-            {currentView === 'map' && <MapBox speciesList={filteredSpecies} />}
-            {currentView === 'network' && (
-              <NetworkView
-                speciesList={filteredSpecies}
-                onSelectSpecies={(s) => {
-                  window.location.href = `/species/${s.id}`;
-                }}
-              />
+          <div className="mt-8">
+            <p className="mb-4 font-mono text-xs text-fog">
+              {filtered.length} of {all.length} species
+            </p>
+            {filtered.length === 0 ? (
+              <EmptyState onClearFilters={resetAll} />
+            ) : view === 'grid' ? (
+              <SpeciesGrid speciesList={filtered} ripple={ripple} onSimulateLoss={setRippleTarget} />
+            ) : view === 'map' ? (
+              <MapBox speciesList={filtered} />
+            ) : (
+              <NetworkView speciesList={filtered} />
             )}
           </div>
+        </section>
+      </main>
+
+      <footer className="border-t border-ink-600/60">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-10 text-sm text-fog sm:px-8 md:flex-row md:justify-between">
+          <p>
+            <span className="font-display text-lg text-paper">Keystone</span> — a field guide to India’s threatened wildlife.
+          </p>
+          <p>Photos from Wikimedia Commons contributors · Status from the IUCN Red List · Identification by Gemini, with OpenAI as fallback.</p>
         </div>
-      </div>
+      </footer>
 
-      <ExtinctionRipple
-        targetSpecies={activeRippleSpecies}
-        affectedCount={affectedIds.length}
-        onClose={() => {
-          setActiveRippleSpecies(null);
-          setAffectedIds([]);
-        }}
-      />
-
-      <FieldScannerModal
-        isOpen={isScannerOpen}
-        onClose={() => setIsScannerOpen(false)}
-        onSpeciesIdentified={(species) => {
-          setSpeciesList((prev) => [species, ...prev]);
-          window.location.href = `/species/${species.id}`;
-        }}
-      />
-    </main>
+      <ExtinctionRipple target={rippleTarget} affected={affected} onClose={() => setRippleTarget(null)} />
+      <FieldScannerModal isOpen={scanner.open} initialFile={scanner.file} onClose={() => setScanner({ open: false, file: null })} />
+    </>
   );
 }

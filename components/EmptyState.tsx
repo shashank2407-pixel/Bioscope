@@ -1,25 +1,14 @@
 'use client';
 import { SearchX } from 'lucide-react';
 
-interface EmptyStateProps {
-  onClearFilters: () => void;
-}
-
-export default function EmptyState({ onClearFilters }: EmptyStateProps) {
+export default function EmptyState({ onClearFilters }: { onClearFilters: () => void }) {
   return (
-    <div className="col-span-full py-20 bg-keystone-surface rounded-2xl border border-gray-800 text-center flex flex-col items-center justify-center p-8">
-      <div className="w-16 h-16 rounded-2xl bg-keystone-accentMuted flex items-center justify-center text-keystone-accent mb-4 border border-keystone-accent/30">
-        <SearchX className="w-8 h-8" />
-      </div>
-      <h3 className="text-xl font-bold text-white mb-2">No species found in this exact criteria.</h3>
-      <p className="text-gray-400 text-sm max-w-md mb-6">
-        Try broadening your search parameters or clearing current filters to explore the full catalog.
-      </p>
-      <button
-        onClick={onClearFilters}
-        className="px-6 py-2.5 bg-keystone-accent text-keystone-bg font-semibold rounded-xl text-sm transition-all shadow-lg shadow-keystone-accent/20 hover:opacity-90"
-      >
-        Clear All Filters
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-ink-500 px-6 py-20 text-center">
+      <SearchX className="h-8 w-8 text-fog" strokeWidth={1.5} aria-hidden />
+      <h3 className="mt-4 font-display text-3xl text-paper">No species match these filters</h3>
+      <p className="mt-2 max-w-md text-sm text-mist">Clear a filter, or ask the guide in plain language.</p>
+      <button onClick={onClearFilters} className="btn-ghost mt-6">
+        Clear filters
       </button>
     </div>
   );
