@@ -1,0 +1,44 @@
+[
+  {
+    "id": "1",
+    "common_name": "Bengal Tiger",
+    "scientific_name": "Panthera tigris tigris",
+    "description": "An apex predator native to the Indian subcontinent, crucial for maintaining balanced forest herbivore populations.",
+    "image_url": "https://images.unsplash.com/photo-1534188753412-3e26d0d618d6?auto=format&fit=crop&q=80&w=800",
+    "habitat": "Forest",
+    "region": "India",
+    "status": "EN",
+    "latitude": 23.17,
+    "longitude": 79.93,
+    "ecological_role": "Apex predator maintaining forest health and trophic equilibrium.",
+    "dependencies": ["Chital Deer", "Sal Tree", "Langur"]
+  },
+  {
+    "id": "2",
+    "common_name": "Red Panda",
+    "scientific_name": "Ailurus fulgens",
+    "description": "A small mammal native to the eastern Himalayas and southwestern China, acting as a key indicator of high-altitude forest health.",
+    "image_url": "https://images.unsplash.com/photo-1558882224-dda166733046?auto=format&fit=crop&q=80&w=800",
+    "habitat": "Himalayas",
+    "region": "Himalayas",
+    "status": "EN",
+    "latitude": 27.33,
+    "longitude": 88.39,
+    "ecological_role": "Seed disperser and indicator of temperate forest integrity.",
+    "dependencies": ["Bamboo", "Rhododendron", "Lichens"]
+  },
+  {
+    "id": "3",
+    "common_name": "Vaquita",
+    "scientific_name": "Phocoena sinus",
+    "description": "The rarest marine mammal in the world, endemic to the northern end of the Gulf of California.",
+    "image_url": "https://images.unsplash.com/photo-1570481662006-a1c2e75f7e0e?auto=format&fit=crop&q=80&w=800",
+    "habitat": "Marine",
+    "region": "Gulf of California",
+    "status": "CR",
+    "latitude": 31.0,
+    "longitude": -114.5,
+    "ecological_role": "Critical marine predator in shallow coastal gulf waters.",
+    "dependencies": ["Small Fish", "Squid", "Crustaceans"]
+  }
+]
