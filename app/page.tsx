@@ -10,6 +10,7 @@ import Hero from '@/components/Hero';
 import SearchBar from '@/components/SearchBar';
 import CatalogFilters from '@/components/SidebarFilters';
 import KindToggle from '@/components/KindToggle';
+import SearchHighlights from '@/components/SearchHighlights';
 import ViewToggle, { type CatalogView } from '@/components/ViewToggle';
 import SpeciesGrid from '@/components/SpeciesGrid';
 import EmptyState from '@/components/EmptyState';
@@ -108,6 +109,7 @@ export default function Home() {
                 setAiSummary(null);
               }}
             />
+            <SearchHighlights speciesList={filtered} active={Boolean(filters.query.trim() || filters.aiIds)} />
             <CatalogFilters
               counts={statusCounts}
               status={filters.status}
