@@ -1,7 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { findAffected, type Species } from '@/lib/ecosystem';
+import { findAffected, type Kind, type Species } from '@/lib/ecosystem';
 import { applyFilters, countByStatus, EMPTY_FILTERS, isFiltered, uniqueSorted, type CatalogFilterState } from '@/lib/filters';
 import { askCatalog } from '@/lib/semantic-search';
 import { useCatalog } from '@/lib/useCatalog';
@@ -9,6 +9,7 @@ import Navbar from '@/components/Navbar';
 import Hero from '@/components/Hero';
 import SearchBar from '@/components/SearchBar';
 import CatalogFilters from '@/components/SidebarFilters';
+import KindToggle from '@/components/KindToggle';
 import ViewToggle, { type CatalogView } from '@/components/ViewToggle';
 import SpeciesGrid from '@/components/SpeciesGrid';
 import EmptyState from '@/components/EmptyState';
@@ -16,9 +17,9 @@ import NetworkView from '@/components/NetworkView';
 import ExtinctionRipple from '@/components/ExtinctionRipple';
 import FieldScannerModal from '@/components/FieldScannerModal';
 
-const MapBox = dynamic(() => import('@/components/MapBox'), {
+const GlobeView = dynamic(() => import('@/components/MapBox'), {
   ssr: false,
-  loading: () => <div className="h-[min(70vh,640px)] min-h-[420px] animate-pulse rounded-2xl bg-ink-800" />,
+  loading: () => <div className="h-[min(75vh,680px)] min-h-[460px] animate-pulse rounded-2xl bg-ink-800" />,
 });
 
 export default function Home() {
@@ -34,6 +35,11 @@ export default function Home() {
 
   const filtered = useMemo(() => applyFilters(all, filters), [all, filters]);
   const statusCounts = useMemo(() => countByStatus(applyFilters(all, { ...filters, status: '' })), [all, filters]);
+  const kindCounts = useMemo(() => {
+    const scoped = applyFilters(all, { ...filters, kind: '' });
+    return { flora: scoped.filter((s) => s.kind === 'flora').length, fauna: scoped.filter((s) => s.kind === 'fauna').length };
+  }, [all, filters]);
+  const setKind = (kind: Kind | '') => update({ kind });
   const habitats = useMemo(() => uniqueSorted(all.map((s) => s.habitat)), [all]);
   const regions = useMemo(() => uniqueSorted(all.map((s) => s.region)), [all]);
 
@@ -80,7 +86,10 @@ export default function Home() {
                 Species, and the web they hold up
               </h2>
             </div>
-            <ViewToggle value={view} onChange={setView} />
+            <div className="flex flex-wrap items-center gap-3">
+              <KindToggle value={filters.kind} onChange={setKind} counts={kindCounts} />
+              <ViewToggle value={view} onChange={setView} />
+            </div>
           </div>
 
           <div className="mt-8 space-y-4">
@@ -123,7 +132,7 @@ export default function Home() {
             ) : view === 'grid' ? (
               <SpeciesGrid speciesList={filtered} ripple={ripple} onSimulateLoss={setRippleTarget} />
             ) : view === 'map' ? (
-              <MapBox speciesList={filtered} />
+              <GlobeView speciesList={filtered} kind={filters.kind} onKindChange={setKind} kindCounts={kindCounts} />
             ) : (
               <NetworkView speciesList={filtered} />
             )}

@@ -1,7 +1,9 @@
-import type { Species, StatusCode } from './ecosystem';
+import type { Kind, Species, StatusCode } from './ecosystem';
 
 export interface CatalogFilterState {
   query: string;
+  /** '' shows flora and fauna together. */
+  kind: Kind | '';
   habitat: string;
   region: string;
   status: StatusCode | '';
@@ -9,10 +11,11 @@ export interface CatalogFilterState {
   aiIds: string[] | null;
 }
 
-export const EMPTY_FILTERS: CatalogFilterState = { query: '', habitat: '', region: '', status: '', aiIds: null };
+export const EMPTY_FILTERS: CatalogFilterState = { query: '', kind: '', habitat: '', region: '', status: '', aiIds: null };
 
 export function applyFilters(list: Species[], f: CatalogFilterState): Species[] {
   let result = list;
+  if (f.kind) result = result.filter((s) => s.kind === f.kind);
   if (f.habitat) result = result.filter((s) => s.habitat === f.habitat);
   if (f.region) result = result.filter((s) => s.region === f.region);
   if (f.status) result = result.filter((s) => s.status === f.status);
@@ -30,7 +33,7 @@ export function applyFilters(list: Species[], f: CatalogFilterState): Species[] 
 }
 
 export function isFiltered(f: CatalogFilterState) {
-  return Boolean(f.query || f.habitat || f.region || f.status || f.aiIds);
+  return Boolean(f.query || f.kind || f.habitat || f.region || f.status || f.aiIds);
 }
 
 export function countByStatus(list: Species[]) {

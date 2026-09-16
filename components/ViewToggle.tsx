@@ -1,11 +1,11 @@
 'use client';
-import { LayoutGrid, Map as MapIcon, Waypoints } from 'lucide-react';
+import { Globe, LayoutGrid, Waypoints } from 'lucide-react';
 
 export type CatalogView = 'grid' | 'map' | 'web';
 
 const VIEWS = [
   { id: 'grid', label: 'Catalog', icon: LayoutGrid },
-  { id: 'map', label: 'Map', icon: MapIcon },
+  { id: 'map', label: 'Globe', icon: Globe },
   { id: 'web', label: 'Web of life', icon: Waypoints },
 ] as const;
 

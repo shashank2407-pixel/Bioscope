@@ -23,6 +23,8 @@ export class AIError extends Error {
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+/** Any OpenAI-compatible endpoint (OpenAI itself, a proxy, or a self-hosted gateway). */
+const OPENAI_BASE_URL = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
 
 export function configuredProviders(): Provider[] {
   const providers: Provider[] = [];
@@ -90,7 +92,7 @@ async function callOpenAI(req: JsonRequest) {
   const userContent: Record<string, unknown>[] = [{ type: 'text', text: req.prompt }];
   if (req.imageDataUrl) userContent.push({ type: 'image_url', image_url: { url: req.imageDataUrl, detail: 'high' } });
 
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+  const res = await fetch(`${OPENAI_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
     signal: AbortSignal.timeout(req.timeoutMs ?? 25_000),

@@ -7,6 +7,7 @@ const credit = (file: string) => `https://commons.wikimedia.org/wiki/File:${file
 export const CATALOG: Species[] = [
   {
     id: 'bengal-tiger',
+    kind: 'fauna',
     common_name: 'Bengal Tiger',
     scientific_name: 'Panthera tigris tigris',
     description:
@@ -25,6 +26,7 @@ export const CATALOG: Species[] = [
   },
   {
     id: 'red-panda',
+    kind: 'fauna',
     common_name: 'Red Panda',
     scientific_name: 'Ailurus fulgens',
     description:
@@ -43,6 +45,7 @@ export const CATALOG: Species[] = [
   },
   {
     id: 'ganges-river-dolphin',
+    kind: 'fauna',
     common_name: 'Ganges River Dolphin',
     scientific_name: 'Platanista gangetica',
     description:
@@ -61,6 +64,7 @@ export const CATALOG: Species[] = [
   },
   {
     id: 'snow-leopard',
+    kind: 'fauna',
     common_name: 'Snow Leopard',
     scientific_name: 'Panthera uncia',
     description:
@@ -79,6 +83,7 @@ export const CATALOG: Species[] = [
   },
   {
     id: 'indian-rhinoceros',
+    kind: 'fauna',
     common_name: 'Indian Rhinoceros',
     scientific_name: 'Rhinoceros unicornis',
     description:
@@ -97,6 +102,7 @@ export const CATALOG: Species[] = [
   },
   {
     id: 'asian-elephant',
+    kind: 'fauna',
     common_name: 'Asian Elephant',
     scientific_name: 'Elephas maximus',
     description:
@@ -115,6 +121,7 @@ export const CATALOG: Species[] = [
   },
   {
     id: 'great-hornbill',
+    kind: 'fauna',
     common_name: 'Great Hornbill',
     scientific_name: 'Buceros bicornis',
     description:
@@ -133,6 +140,7 @@ export const CATALOG: Species[] = [
   },
   {
     id: 'lion-tailed-macaque',
+    kind: 'fauna',
     common_name: 'Lion-tailed Macaque',
     scientific_name: 'Macaca silenus',
     description:
@@ -151,6 +159,7 @@ export const CATALOG: Species[] = [
   },
   {
     id: 'gharial',
+    kind: 'fauna',
     common_name: 'Gharial',
     scientific_name: 'Gavialis gangeticus',
     description:
@@ -169,6 +178,7 @@ export const CATALOG: Species[] = [
   },
   {
     id: 'nilgiri-tahr',
+    kind: 'fauna',
     common_name: 'Nilgiri Tahr',
     scientific_name: 'Nilgiritragus hylocrius',
     description:
@@ -187,6 +197,7 @@ export const CATALOG: Species[] = [
   },
   {
     id: 'hawksbill-sea-turtle',
+    kind: 'fauna',
     common_name: 'Hawksbill Sea Turtle',
     scientific_name: 'Eretmochelys imbricata',
     description:
@@ -205,6 +216,7 @@ export const CATALOG: Species[] = [
   },
   {
     id: 'indian-pangolin',
+    kind: 'fauna',
     common_name: 'Indian Pangolin',
     scientific_name: 'Manis crassicaudata',
     description:
@@ -223,6 +235,7 @@ export const CATALOG: Species[] = [
   },
   {
     id: 'great-indian-bustard',
+    kind: 'fauna',
     common_name: 'Great Indian Bustard',
     scientific_name: 'Ardeotis nigriceps',
     description:
@@ -241,6 +254,7 @@ export const CATALOG: Species[] = [
   },
   {
     id: 'purple-frog',
+    kind: 'fauna',
     common_name: 'Purple Frog',
     scientific_name: 'Nasikabatrachus sahyadrensis',
     description:
@@ -259,6 +273,7 @@ export const CATALOG: Species[] = [
   },
   {
     id: 'dugong',
+    kind: 'fauna',
     common_name: 'Dugong',
     scientific_name: 'Dugong dugon',
     description:
@@ -277,6 +292,7 @@ export const CATALOG: Species[] = [
   },
   {
     id: 'blackbuck',
+    kind: 'fauna',
     common_name: 'Blackbuck',
     scientific_name: 'Antilope cervicapra',
     description:
@@ -292,5 +308,242 @@ export const CATALOG: Species[] = [
     ecological_role: 'Grazer of short grassland and prey for wolves.',
     dependencies: ['Arid grassland'],
     field_notes: ['It can run at over 80 km/h.'],
+  },
+
+  // ---------------------------------------------------------------- Flora
+  {
+    id: 'banyan',
+    kind: 'flora',
+    common_name: 'Banyan',
+    scientific_name: 'Ficus benghalensis',
+    description:
+      'India’s national tree. Aerial roots drop from its branches and thicken into new trunks, so one banyan can spread over an acre and behave like a small forest.',
+    image_url: commons('9/9f/Great_banyan_tree_kol.jpg/960px-Great_banyan_tree_kol.jpg'),
+    image_credit: credit('Great_banyan_tree_kol.jpg'),
+    habitat: 'Forest',
+    region: 'Central India',
+    status: 'LC',
+    latitude: 22.57,
+    longitude: 88.36,
+    taxonomy: { kingdom: 'Plantae', phylum: 'Tracheophyta', class: 'Magnoliopsida', order: 'Rosales', family: 'Moraceae', genus: 'Ficus' },
+    ecological_role: 'A keystone food plant: it fruits when little else does, feeding hornbills, monkeys, bats and civets through the lean season.',
+    dependencies: ['Fig wasps', 'Fruit bats'],
+    aliases: ['Fig trees', 'Fig tree', 'Figs'],
+    field_notes: ['Each fig species is pollinated by its own species of wasp.', 'The Great Banyan in Kolkata has more than 3,000 aerial-root trunks.'],
+  },
+  {
+    id: 'sal-tree',
+    kind: 'flora',
+    common_name: 'Sal',
+    scientific_name: 'Shorea robusta',
+    description:
+      'The dominant hardwood of central and northern Indian forests, forming near-pure stands that define the habitat tigers and elephants move through.',
+    image_url: commons('f/fd/Shorea_robusta.jpg/960px-Shorea_robusta.jpg'),
+    image_credit: credit('Shorea_robusta.jpg'),
+    habitat: 'Forest',
+    region: 'Central India',
+    status: 'LC',
+    latitude: 23.5,
+    longitude: 80.5,
+    taxonomy: { kingdom: 'Plantae', phylum: 'Tracheophyta', class: 'Magnoliopsida', order: 'Malvales', family: 'Dipterocarpaceae', genus: 'Shorea' },
+    ecological_role: 'Structural species of the forest: its canopy and deep leaf litter set the conditions every other forest species lives in.',
+    dependencies: ['Monsoon rains', 'Leaf litter fungi'],
+    aliases: ['Sal forest', 'Sal Tree'],
+    field_notes: ['Sal is slow to burn, so sal forest resists fire better than surrounding scrub.'],
+  },
+  {
+    id: 'indian-thorny-bamboo',
+    kind: 'flora',
+    common_name: 'Indian Thorny Bamboo',
+    scientific_name: 'Bambusa bambos',
+    description:
+      'A giant clumping grass that can add nearly a metre of height in a day, then flowers once after decades and dies.',
+    image_url: commons('b/be/Bambusa_bamus.JPG/960px-Bambusa_bamus.JPG'),
+    image_credit: credit('Bambusa_bamus.JPG'),
+    habitat: 'Forest',
+    region: 'Western Ghats',
+    status: 'LC',
+    latitude: 11.4,
+    longitude: 76.7,
+    taxonomy: { kingdom: 'Plantae', phylum: 'Tracheophyta', class: 'Liliopsida', order: 'Poales', family: 'Poaceae', genus: 'Bambusa' },
+    ecological_role: 'Fast-growing food and cover for elephants, gaur and red pandas; its clumps stabilise stream banks.',
+    dependencies: ['Monsoon rains', 'Stream banks'],
+    aliases: ['Bamboo'],
+    field_notes: ['A whole bamboo stand flowers at once, then dies together — gregarious flowering.', 'Mass flowering releases so much seed that rat populations explode afterwards.'],
+  },
+  {
+    id: 'tree-rhododendron',
+    kind: 'flora',
+    common_name: 'Tree Rhododendron',
+    scientific_name: 'Rhododendron arboreum',
+    description:
+      'A Himalayan tree that covers whole slopes in red flowers in spring, growing at altitudes where few other broadleaf trees survive.',
+    image_url: commons('c/c9/Lali_Gurans.JPG/960px-Lali_Gurans.JPG'),
+    image_credit: credit('Lali_Gurans.JPG'),
+    habitat: 'Mountain',
+    region: 'Eastern Himalayas',
+    status: 'LC',
+    latitude: 27.4,
+    longitude: 88.5,
+    taxonomy: { kingdom: 'Plantae', phylum: 'Tracheophyta', class: 'Magnoliopsida', order: 'Ericales', family: 'Ericaceae', genus: 'Rhododendron' },
+    ecological_role: 'Early-season nectar source for Himalayan bees and sunbirds, and shelter canopy for red pandas.',
+    dependencies: ['Himalayan bees', 'Sunbirds', 'Acidic mountain soil'],
+    aliases: ['Rhododendron forest', 'Rhododendron'],
+    field_notes: ['It is the state tree of Uttarakhand and the national flower of Nepal.'],
+  },
+  {
+    id: 'sundari',
+    kind: 'flora',
+    common_name: 'Sundari',
+    scientific_name: 'Heritiera fomes',
+    description:
+      'The mangrove that gives the Sundarbans its name. It breathes through pencil-like roots that push up out of the tidal mud.',
+    image_url: commons('4/40/Sundarbans_02.jpg/960px-Sundarbans_02.jpg'),
+    image_credit: credit('Sundarbans_02.jpg'),
+    habitat: 'Wetland',
+    region: 'Ganges Basin',
+    status: 'EN',
+    latitude: 21.95,
+    longitude: 89.18,
+    taxonomy: { kingdom: 'Plantae', phylum: 'Tracheophyta', class: 'Magnoliopsida', order: 'Malvales', family: 'Malvaceae', genus: 'Heritiera' },
+    ecological_role: 'Holds the delta together: mangrove roots trap sediment, break storm surges and shelter juvenile fish.',
+    dependencies: ['Tidal mudflats', 'Brackish water'],
+    aliases: ['Mangrove forest', 'Mangroves'],
+    field_notes: ['Rising salinity from reduced river flow is killing sundari stands across the delta.'],
+  },
+  {
+    id: 'indian-sandalwood',
+    kind: 'flora',
+    common_name: 'Indian Sandalwood',
+    scientific_name: 'Santalum album',
+    description:
+      'A small hemiparasitic tree that taps the roots of neighbouring plants for water and nutrients, and lays down fragrant heartwood over decades.',
+    image_url: commons('e/e4/Santalum_album_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-128.jpg/960px-Santalum_album_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-128.jpg'),
+    image_credit: credit('Santalum_album_-_Köhler–s_Medizinal-Pflanzen-128.jpg'),
+    habitat: 'Forest',
+    region: 'Western Ghats',
+    status: 'VU',
+    latitude: 12.3,
+    longitude: 76.65,
+    taxonomy: { kingdom: 'Plantae', phylum: 'Tracheophyta', class: 'Magnoliopsida', order: 'Santalales', family: 'Santalaceae', genus: 'Santalum' },
+    ecological_role: 'Its fruit feeds birds that scatter the seed; it cannot grow past seedling stage without a host plant.',
+    dependencies: ['Host tree roots', 'Seed-dispersing birds'],
+    field_notes: ['A tree needs roughly 15 years before its heartwood is worth harvesting, which is why poaching targets mature trees.'],
+  },
+  {
+    id: 'khasi-pitcher-plant',
+    kind: 'flora',
+    common_name: 'Khasi Pitcher Plant',
+    scientific_name: 'Nepenthes khasiana',
+    description:
+      'India’s only pitcher plant, found solely in Meghalaya. Its leaf tips form fluid-filled traps that digest insects to make up for poor soil.',
+    image_url: commons('9/9b/Nepenthes_khasiana.jpg/960px-Nepenthes_khasiana.jpg'),
+    image_credit: credit('Nepenthes_khasiana.jpg'),
+    habitat: 'Mountain',
+    region: 'Northeast India',
+    status: 'EN',
+    latitude: 25.5,
+    longitude: 91.7,
+    taxonomy: { kingdom: 'Plantae', phylum: 'Tracheophyta', class: 'Magnoliopsida', order: 'Caryophyllales', family: 'Nepenthaceae', genus: 'Nepenthes' },
+    ecological_role: 'A carnivorous plant of nutrient-poor slopes; its pitchers are a miniature habitat for specialised insect larvae.',
+    dependencies: ['Insects', 'Acidic bog soil'],
+    field_notes: ['Locally called “monkey cups”.', 'Collection for trade and quarrying have pushed it to a handful of sites.'],
+  },
+  {
+    id: 'ashoka-tree',
+    kind: 'flora',
+    common_name: 'Ashoka Tree',
+    scientific_name: 'Saraca asoca',
+    description:
+      'An evergreen understorey tree of moist Western Ghats forest, flowering in dense orange clusters directly off its branches.',
+    image_url: commons('2/2f/Sita-Ashok_%28Saraca_asoca%29_flowers_in_Kolkata_W_IMG_4146.jpg/960px-Sita-Ashok_%28Saraca_asoca%29_flowers_in_Kolkata_W_IMG_4146.jpg'),
+    image_credit: credit('Sita-Ashok_(Saraca_asoca)_flowers_in_Kolkata_W_IMG_4146.jpg'),
+    habitat: 'Forest',
+    region: 'Western Ghats',
+    status: 'VU',
+    latitude: 13.3,
+    longitude: 74.9,
+    taxonomy: { kingdom: 'Plantae', phylum: 'Tracheophyta', class: 'Magnoliopsida', order: 'Fabales', family: 'Fabaceae', genus: 'Saraca' },
+    ecological_role: 'Night-flowering nectar source for moths, and a shade tree along forest streams.',
+    dependencies: ['Pollinating moths', 'Stream banks'],
+    field_notes: ['Heavy bark collection for medicine is a main reason wild populations are shrinking.'],
+  },
+  {
+    id: 'sickle-seagrass',
+    kind: 'flora',
+    common_name: 'Sickle Seagrass',
+    scientific_name: 'Thalassia hemprichii',
+    description:
+      'A true flowering plant that lives fully submerged in shallow sea, spreading through sand by underground stems to form dense meadows.',
+    image_url: commons('f/f7/Thalassia_hemprichii.jpg/960px-Thalassia_hemprichii.jpg'),
+    image_credit: credit('Thalassia_hemprichii.jpg'),
+    habitat: 'Marine',
+    region: 'Gulf of Mannar',
+    status: 'LC',
+    latitude: 9.2,
+    longitude: 79.2,
+    taxonomy: { kingdom: 'Plantae', phylum: 'Tracheophyta', class: 'Liliopsida', order: 'Alismatales', family: 'Hydrocharitaceae', genus: 'Thalassia' },
+    ecological_role: 'The entire diet of dugongs and turtles here, plus a nursery for reef fish and a large store of carbon in its sediment.',
+    dependencies: ['Clear shallow water', 'Sunlight'],
+    aliases: ['Seagrass meadows', 'Seagrass'],
+    field_notes: ['Seagrass meadows lock away carbon far faster per hectare than rainforest.'],
+  },
+  {
+    id: 'neem',
+    kind: 'flora',
+    common_name: 'Neem',
+    scientific_name: 'Azadirachta indica',
+    description:
+      'A drought-hardy evergreen planted across Indian villages and roadsides, whose leaves and seeds contain natural insect-repelling compounds.',
+    image_url: commons('7/7b/Neem_Tree_in_Rajasthan%2C_India.jpg/960px-Neem_Tree_in_Rajasthan%2C_India.jpg'),
+    image_credit: credit('Neem_Tree_in_Rajasthan,_India.jpg'),
+    habitat: 'Urban',
+    region: 'Western India',
+    status: 'LC',
+    latitude: 26.9,
+    longitude: 75.8,
+    taxonomy: { kingdom: 'Plantae', phylum: 'Tracheophyta', class: 'Magnoliopsida', order: 'Sapindales', family: 'Meliaceae', genus: 'Azadirachta' },
+    ecological_role: 'Shade and roosting tree in dry, settled landscapes where little else grows; its fruit feeds birds and bats.',
+    dependencies: ['Seed-dispersing birds', 'Arid grassland'],
+    field_notes: ['Azadirachtin, its active compound, disrupts insect moulting rather than poisoning outright.'],
+  },
+  {
+    id: 'beddomes-cycad',
+    kind: 'flora',
+    common_name: 'Beddome’s Cycad',
+    scientific_name: 'Cycas beddomei',
+    description:
+      'A palm-like relic of a lineage older than flowering plants, restricted to a small stretch of dry hills in the Eastern Ghats.',
+    image_url: commons('9/99/Cycas_beddomei_03.jpg/960px-Cycas_beddomei_03.jpg'),
+    image_credit: credit('Cycas_beddomei_03.jpg'),
+    habitat: 'Forest',
+    region: 'Eastern Ghats',
+    status: 'CR',
+    latitude: 13.63,
+    longitude: 79.42,
+    taxonomy: { kingdom: 'Plantae', phylum: 'Cycadophyta', class: 'Cycadopsida', order: 'Cycadales', family: 'Cycadaceae', genus: 'Cycas' },
+    ecological_role: 'Hosts nitrogen-fixing bacteria in specialised roots, enriching the thin soil of rocky slopes.',
+    dependencies: ['Rocky hill slopes', 'Pollinating beetles'],
+    field_notes: ['Cycads are pollinated by beetles, a system older than bees.', 'Collection of its male cones for medicine has stripped many slopes.'],
+  },
+  {
+    id: 'bourdillons-dipterocarp',
+    kind: 'flora',
+    common_name: 'Bourdillon’s Dipterocarp',
+    scientific_name: 'Dipterocarpus bourdillonii',
+    description:
+      'A towering rainforest tree of the southern Western Ghats, down to scattered survivors in fragmented valleys.',
+    image_url: commons('b/bb/Dipterocarpus_bourdillonii_01.JPG/960px-Dipterocarpus_bourdillonii_01.JPG'),
+    image_credit: credit('Dipterocarpus_bourdillonii_01.JPG'),
+    habitat: 'Forest',
+    region: 'Western Ghats',
+    status: 'CR',
+    latitude: 9.5,
+    longitude: 77.1,
+    taxonomy: { kingdom: 'Plantae', phylum: 'Tracheophyta', class: 'Magnoliopsida', order: 'Malvales', family: 'Dipterocarpaceae', genus: 'Dipterocarpus' },
+    ecological_role: 'Emergent canopy tree: its crown is the upper storey that hornbills and lion-tailed macaques depend on.',
+    dependencies: ['Monsoon rains', 'Unbroken canopy'],
+    aliases: ['Rainforest canopy'],
+    field_notes: ['Its winged seeds spin to the ground and stay viable only a few days.'],
   },
 ];

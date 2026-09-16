@@ -1,3 +1,5 @@
+export type Kind = 'flora' | 'fauna';
+
 export type StatusCode = 'LC' | 'NT' | 'VU' | 'EN' | 'CR' | 'EW' | 'EX' | 'DD' | 'NE';
 
 export interface Taxonomy {
@@ -11,6 +13,8 @@ export interface Taxonomy {
 
 export interface Species {
   id: string;
+  /** flora = plants, fauna = animals. Drives the globe's flora/fauna toggle. */
+  kind: Kind;
   scientific_name: string;
   common_name: string;
   description: string;
@@ -24,6 +28,8 @@ export interface Species {
   taxonomy?: Taxonomy;
   ecological_role?: string;
   dependencies?: string[];
+  /** Other names this species answers to, so dependency strings like "Fig trees" link to it. */
+  aliases?: string[];
   field_notes?: string[];
   /** Present on species created by the field scanner. */
   source?: 'catalog' | 'scan';
@@ -73,6 +79,11 @@ export interface AffectedSpecies {
   reasons: string[];
 }
 
+/** Every name a species answers to, normalised. */
+export function namesOf(s: Species): string[] {
+  return [s.common_name, ...(s.aliases ?? [])].map(norm);
+}
+
 /**
  * Species that would feel the loss of `target`: those sharing a food or habitat
  * resource with it, those it names as a dependency, and neighbours in the same
@@ -80,7 +91,7 @@ export interface AffectedSpecies {
  */
 export function findAffected(target: Species, list: Species[]): AffectedSpecies[] {
   const targetDeps = new Set((target.dependencies ?? []).map(norm));
-  const targetName = norm(target.common_name);
+  const targetNames = new Set(namesOf(target));
 
   return list
     .filter((s) => s.id !== target.id && norm(s.scientific_name) !== norm(target.scientific_name))
@@ -88,8 +99,8 @@ export function findAffected(target: Species, list: Species[]): AffectedSpecies[
       const reasons: string[] = [];
       const shared = (s.dependencies ?? []).filter((d) => targetDeps.has(norm(d)));
       if (shared.length) reasons.push(`Shares ${shared.join(', ')}`);
-      if (targetDeps.has(norm(s.common_name))) reasons.push(`${target.common_name} depends on it`);
-      if ((s.dependencies ?? []).some((d) => norm(d) === targetName)) reasons.push(`Depends on ${target.common_name}`);
+      if (namesOf(s).some((n) => targetDeps.has(n))) reasons.push(`${target.common_name} depends on it`);
+      if ((s.dependencies ?? []).some((d) => targetNames.has(norm(d)))) reasons.push(`Depends on ${target.common_name}`);
       if (norm(s.habitat) === norm(target.habitat) && norm(s.region) === norm(target.region)) {
         reasons.push(`Same ${s.habitat.toLowerCase()} in ${s.region}`);
       }

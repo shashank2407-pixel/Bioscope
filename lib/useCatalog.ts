@@ -53,6 +53,7 @@ function normalizeRemote(row: Record<string, unknown>): Species | null {
     id: String(row.id),
     status: normalizeStatus(row.status),
     habitat: normalizeHabitat(row.habitat),
+    kind: row.kind === 'flora' ? 'flora' : 'fauna',
     latitude: Number(row.latitude) || 0,
     longitude: Number(row.longitude) || 0,
     source: 'catalog',

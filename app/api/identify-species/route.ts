@@ -13,8 +13,9 @@ Use the IUCN Red List category for the species (LC, NT, VU, EN, CR, EW, EX, DD).
 latitude/longitude: a representative point in the species' core wild range (for widespread species, pick a well-known stronghold).
 If the image contains no identifiable organism (a person, object, drawing of nothing, blank image), set is_organism to false and explain briefly in rejection_reason.
 Always fill common_name with the everyday English name.
+kind: "flora" for plants, algae and fungi; "fauna" for animals.
 Respond only with JSON matching this shape:
-{"is_organism": boolean, "rejection_reason": string, "common_name": string, "scientific_name": string, "confidence": number 0-1,
+{"is_organism": boolean, "rejection_reason": string, "kind": "flora" | "fauna", "common_name": string, "scientific_name": string, "confidence": number 0-1,
  "description": string (2 sentences), "habitat": one of ${HABITATS.join(', ')}, "region": string (short native range),
  "status": string, "latitude": number, "longitude": number,
  "taxonomy": {"kingdom","phylum","class","order","family","genus"},
@@ -27,6 +28,7 @@ const SCHEMA = {
   properties: {
     is_organism: { type: 'BOOLEAN' },
     rejection_reason: { type: 'STRING' },
+    kind: { type: 'STRING', enum: ['flora', 'fauna'] },
     common_name: { type: 'STRING' },
     scientific_name: { type: 'STRING' },
     confidence: { type: 'NUMBER' },
@@ -55,11 +57,11 @@ const SCHEMA = {
     visual_cues: { type: 'STRING' },
   },
   required: [
-    'is_organism', 'common_name', 'scientific_name', 'confidence', 'description', 'habitat', 'region', 'status',
+    'is_organism', 'kind', 'common_name', 'scientific_name', 'confidence', 'description', 'habitat', 'region', 'status',
     'latitude', 'longitude', 'taxonomy', 'ecological_role', 'dependencies', 'field_notes',
   ],
   propertyOrdering: [
-    'is_organism', 'rejection_reason', 'visual_cues', 'common_name', 'scientific_name', 'confidence', 'description',
+    'is_organism', 'rejection_reason', 'kind', 'visual_cues', 'common_name', 'scientific_name', 'confidence', 'description',
     'habitat', 'region', 'status', 'latitude', 'longitude', 'taxonomy', 'ecological_role', 'dependencies', 'field_notes',
   ],
 };
@@ -113,6 +115,7 @@ export async function POST(req: Request) {
       identified: true,
       provider,
       species: {
+        kind: data.kind === 'flora' ? 'flora' : 'fauna',
         common_name: commonName,
         scientific_name: scientificName,
         confidence: num(data.confidence, 0, 1, 0.5),
